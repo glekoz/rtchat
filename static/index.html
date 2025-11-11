@@ -1,0 +1,61 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Realtime Chat Demo</title>
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 800px; margin: 2rem auto; }
+    #log { height: 400px; border: 1px solid #ccc; padding: 8px; overflow: auto; background: #f9f9f9 }
+    #controls { margin-top: 1rem }
+  </style>
+</head>
+<body>
+  <h1>Realtime Chat (WebSocket + Redis Pub/Sub)</h1>
+  <div>
+    <label>Username: <input id="username" value="guest" /></label>
+  </div>
+  <div id="log"></div>
+  <div id="controls">
+    <input id="msg" placeholder="Type a message" style="width:70%" />
+    <button id="send">Send</button>
+  </div>
+
+  <script>
+    const logEl = document.getElementById('log')
+    const usernameEl = document.getElementById('username')
+    const msgEl = document.getElementById('msg')
+    const sendBtn = document.getElementById('send')
+
+    function add(line) {
+      const div = document.createElement('div')
+      div.textContent = line
+      logEl.appendChild(div)
+      logEl.scrollTop = logEl.scrollHeight
+    }
+
+    const wsUrl = (location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + '/ws'
+    const ws = new WebSocket(wsUrl)
+
+    ws.addEventListener('open', () => add('Connected'))
+    ws.addEventListener('close', () => add('Disconnected'))
+    ws.addEventListener('message', (ev) => {
+      try {
+        const obj = JSON.parse(ev.data)
+        add(obj.username + ': ' + obj.message)
+      } catch (e) { console.error(e) }
+    })
+
+    sendBtn.addEventListener('click', send)
+    msgEl.addEventListener('keydown', (e) => { if (e.key === 'Enter') send() })
+
+    function send() {
+      const username = usernameEl.value || 'guest'
+      const message = msgEl.value.trim()
+      if (!message) return
+      const obj = { username, message }
+      ws.send(JSON.stringify(obj))
+      msgEl.value = ''
+    }
+  </script>
+</body>
+</html>
